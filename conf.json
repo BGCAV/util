@@ -1,0 +1,7 @@
+{
+	"logFile"     : "",
+	"backupDir"   : "",
+	"backupLoc"   : "",
+	"backupFormat": "%d-%m-%Y",
+	"purgeNumber" : 3
+}
