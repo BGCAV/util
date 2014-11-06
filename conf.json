@@ -3,5 +3,5 @@
 	"backupDir"   : "",
 	"backupLoc"   : "",
 	"backupFormat": "%d-%m-%Y",
-	"purgeNumber" : 3
+	"purgeNumber" : 30
 }
