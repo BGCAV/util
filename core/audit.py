@@ -3,11 +3,11 @@ import os, logger, config, sys
 log = logger.Logger(config.data['logFile'],__name__)
 
 # Function:		readBackups
-# Parameters:	loc (type: str)
+# Parameters:	loc (type: str, desc: backup path)
 # Description:	Searches for backup files in given path 'loc'.
-#				If files are found, will append them to dictionary 
+#				If files are found, they will be appended to dictionary 
 #				'backups' with the format 'filename':'fileageinseconds'
-# Returns:		backups (type: dict)
+# Returns:		backups (type: dict) or False
 def readBackups(loc):
 	retVal = False
 	backups = {}
@@ -27,7 +27,11 @@ def readBackups(loc):
 	assert retVal != False
 	return(retVal)
 
-
+# Function:		checkBackups
+# Parameters:	loc (type: str, desc: backup path)  |  maxage (type: int, desc: age in seconds of which a file is eligible to be purged)
+# Description:	Checks if backups returned by readBackups are older than maxage
+#				If a backup is older than maxage, it will be appended to list 'obselete_backups'
+# Returns:		obselete_backups (type: list) or False
 def checkBackups(loc, maxage):
 	retVal = False
 	backups = readBackups(loc)
@@ -46,7 +50,9 @@ def checkBackups(loc, maxage):
 
 	return(retVal)
 
-
+# Procedure:	purgeBackups
+# Parameters:	loc (type: str, desc: backup path)  |  maxage (type: int, desc: age in seconds of which a file is eligible to be purged)
+# Description:	Gets a list of obselete backups from checkBackups and deletes them.
 def purgeBackups(loc, maxage):
 	obselete_backups = checkBackups(loc, maxage)	
 
