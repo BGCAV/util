@@ -14,10 +14,10 @@ def readBackups(loc):
 		log.log("Backups successfully read.",0)
 		retVal = backups
 	except:
-		log.log("The follow exception has been caught: ")
+		log.log("The follow exception has been caught: {} \nExiting.".format(Exception),2)
+		sys.exit()
 
-
-
+	assert retVal != False
 	return(retVal)
 
 
@@ -33,11 +33,24 @@ def checkBackups(loc, maxage):
 
 	if len(obselete_backups) > 0:
 		log.log("The following backups are obselete and have been marked for deletion: {}".format(obselete_backups),0)
+		retVal = obselete_backups
 	else:
-		log.log("No obselete backups found.",0)
+		log.log("No obselete backups found. Exiting.",0)
+		sys.exit()
+	
+	assert retVal != False
+	return(retVal)
 
 
+def purgeBackups(loc, maxage):
+	retVal = False
+	obselete_backups = checkBackups(loc, maxage)	
 
-
+	for f in os.listdir(loc):
+		for backup in obselete_backups:
+			if f == backup:
+				os.remove(f)
+  
+	
 
 
