@@ -1,6 +1,13 @@
 import os, logger, config, sys
 
-log = logger.Logger(config.data,__name__)
+log = logger.Logger(config.data['logFile'],__name__)
+
+# Function:		readBackups
+# Parameters:	loc (type: str)
+# Description:	Searches for backup files in given path 'loc'.
+#				If files are found, will append them to dictionary 
+#				'backups' with the format 'filename':'fileageinseconds'
+# Returns:		backups (type: dict)
 def readBackups(loc):
 	retVal = False
 	backups = {}
@@ -8,13 +15,13 @@ def readBackups(loc):
 
 	try:
 		for f in os.listdir(loc):
-			age = os.path.getctime(f)
+			age = os.path.getctime(loc+f)
 			backups[f] = age
 
 		log.log("Backups successfully read.",0)
 		retVal = backups
-	except:
-		log.log("The follow exception has been caught: {} \nExiting.".format(Exception),2)
+	except Exception, e:
+		log.log("The follow exception has been caught: {}".format(e),2)
 		sys.exit()
 
 	assert retVal != False
@@ -35,19 +42,37 @@ def checkBackups(loc, maxage):
 		log.log("The following backups are obselete and have been marked for deletion: {}".format(obselete_backups),0)
 		retVal = obselete_backups
 	else:
-		log.log("No obselete backups found. Exiting.",0)
-		sys.exit()
-	
-	assert retVal != False
+		log.log("No obselete backups found.",0)
+
 	return(retVal)
 
 
 def purgeBackups(loc, maxage):
-	retVal = False
 	obselete_backups = checkBackups(loc, maxage)	
 
-	for f in os.listdir(loc):
-		for backup in obselete_backups:
-			if f == backup:
-				os.remove(f)
+	try:
+		for f in os.listdir(loc):
+			for backup in obselete_backups:
+				if f == backup:
+					os.remove(loc+f)
+					log.log("Removing backup: {}".format(f),0)
+	except Exception, e:
+		log.log("The following exception has been caught: {}".format(e),2)
+		sys.exit()
 
+
+def audit():
+	maxage = config.data['purgeAge']
+	loc = config.data['backupDir']
+
+	if loc[-1] != "/": loc += "/"
+
+	log.log("Purge age is set to {}".format(maxage),0)
+
+	if not os.path.exists(loc):
+		log.log("Backup path '{}' does not exist.".format(loc),2)
+		sys.exit()
+
+	maxage = maxage * 24 * 60 * 60 # Converts days to seconds
+	
+	purgeBackups(loc, maxage)
