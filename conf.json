@@ -1,7 +1,7 @@
 {
-	"logFile"     : "info.jog",
-	"backupDir"   : "/home/paul/desktop/util/test/",
-	"backupLoc"   : "/home/paul/desktop/util/file",
-	"backupFormat": "%d-%m-%Y",
+	"logFile"     : "info.log",
+	"backupDir"   : "/test/",
+	"backupLoc"   : "/file",
+	"backupFormat": "%d-%m-%Y:%H:%M:%S",
 	"purgeNumber" : 30
 }

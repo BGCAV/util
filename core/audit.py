@@ -16,8 +16,6 @@ def readBackups(loc):
 	except:
 		log.log("The follow exception has been caught: ")
 
-
-
 	return(retVal)
 
 
@@ -28,16 +26,10 @@ def checkBackups(loc, maxage):
 
 	log.log("Checking for obselete backups.",0)
 	for backup in backups:
-		if backup => maxage:
+		if backup >= maxage:
 			obselete_backups.append(backup)
 
 	if len(obselete_backups) > 0:
 		log.log("The following backups are obselete and have been marked for deletion: {}".format(obselete_backups),0)
 	else:
 		log.log("No obselete backups found.",0)
-
-
-
-
-
-
