@@ -24,7 +24,10 @@ def readBackups(loc):
 		log.log("The follow exception has been caught: {}".format(e),2)
 		sys.exit()
 
-	assert retVal != False
+	if retVal is False:
+		log.log("No backup files found.",1)
+		sys.exit()
+	
 	return(retVal)
 
 # Function:	checkBackups
@@ -47,7 +50,7 @@ def checkBackups(loc, maxage):
 		retVal = obselete_backups
 	else:
 		log.log("No obselete backups found.",0)
-
+	
 	return(retVal)
 
 # Procedure:	purgeBackups
