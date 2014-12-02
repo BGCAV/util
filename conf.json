@@ -1,6 +1,6 @@
 {
 	"logFile"     : "info.log",
-	"backupDir"   : "test/",
+	"backupDir"   : "backup/",
 	"backupLoc"   : "file",
 	"backupFormat": "%S-%M-%H-%d-%m-%Y",
 	"purgeAge" : 30

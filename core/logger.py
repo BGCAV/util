@@ -48,3 +48,4 @@ class Logger():
 	# self.getTime() -> string defined by self.timeFormat
 	def getTime(self):
 		return datetime.fromtimestamp(time()).strftime(self.timeFormat)
+
