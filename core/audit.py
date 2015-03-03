@@ -1,4 +1,4 @@
-import os, logger, config, sys
+import os, logger, config, sys, time
 
 log = logger.Logger(config.data['logFile'],__name__)
 
@@ -42,13 +42,14 @@ def checkBackups(loc, maxage):
 
 	log.log("Checking for obselete backups.",0)
 	for backup in backups:
-		if backup >= maxage:
+		if backup <= maxage:
 			obselete_backups.append(backup)
 
 	if len(obselete_backups) > 0:
 		log.log("The following backups are obselete and have been marked for deletion: {}".format(obselete_backups),0)
 		retVal = obselete_backups
 	else:
+		retVal = []
 		log.log("No obselete backups found.",0)
 	
 	return(retVal)
@@ -57,7 +58,7 @@ def checkBackups(loc, maxage):
 # Parameters:	loc (type: str, desc: backup path)  |  maxage (type: int, desc: age in seconds of which a file is eligible to be purged)
 # Description:	Gets a list of obselete backups from checkBackups and deletes them.
 def purgeBackups(loc, maxage):
-	obselete_backups = checkBackups(loc, maxage)	
+	obselete_backups = checkBackups(loc, maxage)
 
 	try:
 		for f in os.listdir(loc):
@@ -82,6 +83,6 @@ def audit():
 		log.log("Backup path '{}' does not exist.".format(loc),2)
 		sys.exit()
 
-	maxage = maxage * 24 * 60 * 60 # Converts days to seconds
+	maxage = time.time() - (maxage * 24 * 60 * 60) # Converts days to seconds
 	
 	purgeBackups(loc, maxage)
