@@ -2,59 +2,32 @@
 ::-----------------------------------------------------------------------------
 ::--
 ::--  Purpose
-::--    Monitor the execution of a process.
-::--    - If process not running start it
-::--    - If process log suggests failure:
-::--      - Attempt to gracefully close process
-::--      - If process won't gracefully close, forceably terminate it.
+::--    Monitor the execution of SportsManSQL's Portal process by reviewing
+::--    its log.  Under circumstances that indicate connection failures to
+::--    backend Peak Software servers, restart the Portal process.
 ::--
-::--  In
-::--    %1 - (required) program name
-::--    %2 - (required) FilePathName to startup program which launches program name.
-::--          Remember Windows searches current directory before examining PATH.
-::--          Suggest using Windows "start" for GUI programs or CMD for command line ones.
-::--    %3 - (optional) FilePathName to Log Analyzer for program.  Log Analyzer 
-::--         determines subsequent action if any.  An errorlevel of: 
-::--            1 - analyzer failed - do nothing
-::--            0 - program execution normal - do nothing.
-::--           -1 - program impared, try restarting.
-::--           -2 - unable to determine next course of action - do nothing.
-::--         Encode a value of "" if other parameters need be specified after
-::--         this one and there is no Log Analyzer.
-::--    %4 - (optional) Graceful shutdown timeout - an interval, specified in
-::--         seconds, to wait for a process to gracefully shutdown, before
-::--         forceing its shutdown. Default is 300sec=5min.
+::--  Motivation
+::--    After months of flawlessly reconnecting to backend Peak Servers following 
+::--    nightly maintenance, sporatic failures occuring during Portal's initial
+::--    DNS resoultion requests required frequent, manual interaction to restart
+::--    the Portal process.  All manual restarts that occurred during normal
+::--    business hours successfully resolved DNS entries and connected to the
+::--    backend servers.  Note the problem is unlikely to be related to a
+::--    local configuration setting as the configuration information is restored
+::--    to the last "golden" state by a VMWare snapshot.  Furthermore, one
+::--    can manually and successfully reconnect after a failure.
 ::--
-::--  Out
-::--    Writes log file messages to SYSOUT.
+::--    The problem's most likely triggers involve Portal's inability to 
+::--    retry the initially failed DNS requests and some issue with the
+::--    DNS latency in Comcast's network or perhaps Peak's Servers also happen
+::--    to be unavailable for new connections.
 ::--
 ::-----------------------------------------------------------------------------
-setlocal EnableDelayedExpansion
-    set PROGRAM_NAME=%~1
-    set PROGRAM_START_FILEPATH=%~2
-    set LOG_ANALYZER=%~3
-    set SHUTDOWN_GRACEFUL_TIMEOUT_SEC=%~4
-
-    if "%PROGRAM_NAME%" == "" (
-        call :log "Error: program name not specified."
-        endlocal
-        exit /b 1
-    )
-    if not exist "%PROGRAM_START_FILEPATH%" (
-        call :log "Error: Unable to locate start program='%PROGRAM_START_FILEPATH%'"
-        endlocal
-        exit /b 1
-    )
-    call :programToProcessID "%PROGRAM_NAME%" PROCESS_ID
+setlocal
+    call :processMonitorRunning.cmd "Portal.exe" "processStartSportsManSQL.cmd" "logAnalyzerSportsManSQL.cmd" 60 
     if not %errorlevel% == 0 (
-        call :log "Info: program='%PROGRAM_START_FILEPATH%' not running.  Attempting to start"
-        call :processStart "%PROGRAM_START_FILEPATH%"
-        if !errorlevel! == 0 (
-            call :log "Info: program='%PROGRAM_START_FILEPATH%' successful start."
-            call :programToProcessID "%PROGRAM_NAME%" PROCESS_ID
-        ) else (
-            call :log "Error: program='%PROGRAM_START_FILEPATH%' could not start."
-            endlocal
-            exit /b 1
-        )
+        endlocal
+        exit /b 1
     )
+endlocal
+exit /b 0
