@@ -26,16 +26,24 @@
 ::--
 ::-----------------------------------------------------------------------------
 setlocal
+    :: Global Constants:
     set REGEX_MM_DD_YYYY=[0-1][0-9].[0-3][0-9].[2][0-9][0-9][0-9]
     set REGEX_HH_MM_SS=[0-2][0-9]:[0-5][0-9]:[0-5][0-9]
     set REGEX_HH_MM_SS_XM=%REGEX_HH_MM_SS%..M
-    if "%~1"=="" (
+    if "%~1" == "test" (
+        :: run function level tests
         call :testRun
         exit /b
     )
     set LOG_PATHFILE_NAME=%~1
+    if "%LOG_PATHFILE_NAME%" == "" (
+        :: use set "varname=varvalue" when good chance varvalue will have ()s or other special batch characters 
+        set "LOG_PATHFILE_NAME=%ProgramFiles(x86)%\Peak Software Systems\SportSQL\Portal.ERR"
+    )
     set INTERVAL_RELEVANT_SEC=%~2
-
+    if "%INTERVAL_RELEVANT_SEC%" == "" (
+        set INTERVAL_RELEVANT_SEC=10
+    )
     call :logNoError "%LOG_PATHFILE_NAME%"
     if %errorlevel% == 0 (
         endlocal
@@ -46,7 +54,7 @@ setlocal
         endlocal
         exit /b -2
     )
-    call :logEntryRelevant "%DATE%" "%TIME~0,8%" "%LOG_DATE%" "%LOG_TIME%"
+    call :logEntryRelevant "%INTERVAL_RELEVANT_SEC%" "%DATE%" "%TIME:~0,8%" "%LOG_DATE%" "%LOG_TIME%"
     if not %errorlevel% == 0 (
         :: no relevant log entries - assume running fine
         endlocal
@@ -60,17 +68,47 @@ setlocal
 endlocal
 exit /b -2
 
+
 :testRun:
 setlocal
     call :logNoError_test
+    if not %errorlevel% == 0 (
+        endlocal
+        exit /b 1
+    )
     call :timeNormalize_HH_MM_SS_AMPM_test
+    if not %errorlevel% == 0 (
+        endlocal
+        exit /b 1
+    )
     call :date_DAY_MM_DD_YYYY_MM_DD_YY_test
+    if not %errorlevel% == 0 (
+        endlocal
+        exit /b 1
+    )
     call :date_MM_DD_YYYY_MM_DD_YY_test
+    if not %errorlevel% == 0 (
+        endlocal
+        exit /b 1
+    )
     call :logEntryRelevant_test
+    if not %errorlevel% == 0 (
+        endlocal
+        exit /b 1
+    )
     call :logEntryRecentMostValidFind_test
+    if not %errorlevel% == 0 (
+        endlocal
+        exit /b 1
+    )
     call :logEntryRetry_test
+    if not %errorlevel% == 0 (
+        endlocal
+        exit /b 1
+    )
 endlocal
-exit /b
+exit /b 0
+
 
 :logNoError:
 setlocal
@@ -114,6 +152,7 @@ setlocal
 endlocal
 exit /b 0
 
+
 :logEntryRecentMostValid:
 setlocal EnableDelayedExpansion
     set LOG_PATHFILE_NAME=%~1
@@ -121,20 +160,23 @@ setlocal EnableDelayedExpansion
     set LOG_DATE_RTN=%~3
     set LOG_TIME_RTN=%~4
 
-    for /l %%i in (1,1,3) (
+    for /l %%i in (1,1,3) do (
         call :logEntryRecentMostValidFind %%i "%LOG_PATHFILE_NAME%" LOG_ENTRY LOG_DATE LOG_TIME
         if !errorlevel! == 0 (
-            (
-            endlocal
-            set %LOG_ENTRY_RTN%=!LOG_ENTRY!
-            set %LOG_DATE_RTN%=!LOG_DATE!
-            set %LOG_TIME_RTN%=!LOG_TIME!
-            )
-            exit /b 0
+            goto :logEntryRecentMostValid_OK:
         )
     )
+    endlocal
+    exit /b 1
+    :logEntryRecentMostValid_OK:
+(
 endlocal
-exit /b 1
+set "%LOG_ENTRY_RTN%=%LOG_ENTRY%"
+set %LOG_DATE_RTN%=%LOG_DATE%
+set %LOG_TIME_RTN%=%LOG_TIME%
+)
+exit /b 0
+
 
 
 :logEntryRecentMostValidFind:
@@ -162,11 +204,12 @@ setlocal
     )
 (
 endlocal
-set %LOG_ENTRY_RTN%=%LOG_ENTRY%
+set "%LOG_ENTRY_RTN%=%LOG_ENTRY%"
 set %LOG_DATE_RTN%=%LOG_DATE%
 set %LOG_TIME_RTN%=%LOG_TIME%
 )
 exit /b 0
+
 
 :logEntryRecentMostValidFind_test:
 setlocal
@@ -245,7 +288,7 @@ exit /b 0
 
 
 :logEntryRecentMost:
-setlocal EnableDelayedExpansion
+setlocal
     set LINE_FROM_EOF=%~1
     set PATHFILE_NAME=%~2
     set ENTRY_RTN=%~3
@@ -260,9 +303,10 @@ setlocal EnableDelayedExpansion
 endlocal
 exit /b 1
 
+
 :logEntryTimeExtract:
 setlocal
-    set LOG_ENTRY=%~1
+    set "LOG_ENTRY=%~1"
     set LOG_TIME_RTN=%~2
 
     set TIME_EXTRACT=%LOG_ENTRY:~11,11%
@@ -280,7 +324,7 @@ exit /b 0
 
 :logEntryDateExtract:
 setlocal
-    set LOG_ENTRY=%~1
+    set "LOG_ENTRY=%~1"
     set LOG_DATE_RTN=%~2
 
     set LOG_DATE=%LOG_ENTRY:~0,10%
@@ -290,6 +334,7 @@ endlocal
 set %LOG_DATE_RTN%=%LOG_DATE%
 )
 exit /b 0
+
 
 :logEntryRelevant:
 setlocal
@@ -302,7 +347,10 @@ setlocal
     call :timeNormalize_HH_MM_SS_AMPM "%LOG_TIME%" LOG_TIME_SEC_FROM_MDNIGHTH
     call :timeNormalize_HH_MM_SS_TO_SEC "%TIME_OF_REVIEW%" TIME_OF_REVIEW_SEC_FROM_MDNIGHT
     set /A  LOG_INTERVAL=%TIME_OF_REVIEW_SEC_FROM_MDNIGHT%-%LOG_TIME_SEC_FROM_MDNIGHTH%
-    if %LOG_INTERVAL_RELEVANT_SEC% GTR %LOG_INTERVAL% (
+    if %LOG_INTERVAL% LSS 0 (
+        set LOG_INTERVAL=%LOG_INTERVAL:~1%
+    )
+    if %LOG_INTERVAL% GTR %LOG_INTERVAL_RELEVANT_SEC% (
         :: exceeds relevant interval even if in same day
         endlocal
         exit /b 1
@@ -529,7 +577,7 @@ setlocal
     )
     :: ensure absolute value
     if %_dd_int% LSS 0 (
-        set /A _dd_int=%_dd_int% * -1
+        set _dd_int=%_dd_int:~1%
     )
 (
 endlocal
@@ -540,7 +588,7 @@ exit /b 0
 
 :logEntryRetry:
 setlocal
-    set LOG_ENTRY=%~1
+    set "LOG_ENTRY=%~1"
 
     echo %LOG_ENTRY% | findstr /I "error.*1429.*the remote host address is invalid.*0.0.0.0">nul
     if %errorlevel% == 0 (
