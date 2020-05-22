@@ -24,7 +24,7 @@
 ::--
 ::-----------------------------------------------------------------------------
 setlocal
-    call :processMonitorRunning.cmd "Portal.exe" "processStartSportsManSQL.cmd" "logAnalyzerSportsManSQL.cmd" 60 
+    call processMonitorRunning.cmd "notepad.exe" "processStartSportsManSQL.cmd" "logAnalyzerSportsManSQL.cmd" 60
     if not %errorlevel% == 0 (
         endlocal
         exit /b 1
