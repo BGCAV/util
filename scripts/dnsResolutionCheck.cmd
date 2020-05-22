@@ -21,8 +21,13 @@ setlocal
     ::-- use google dns server as well known IP
     set WELL_KNOWN_PING=8.8.8.8
     call :netviable "%WELL_KNOWN_PING%" "%URL_TO_RESOLVE%"
+    if not %errorlevel% == 0 (
+        call :log "Error: Network not viable."
+        endlocal
+        exit /b 1
+    )
 endlocal
-exit /b
+exit /b 0
 
 :netviable:
 setlocal
@@ -51,8 +56,11 @@ exit /b 0
 
 :log:
 setlocal
-    For /f "tokens=2-4 delims=/ " %%a in ('date /t') do (set mydate=%%c-%%a-%%b)
-    For /f "tokens=1-2 delims=/:" %%a in ('time /t') do (set mytime=%%a%%b)
-    echo %mydate%_%mytime%: msg=%1%2%3%4%5%6%7%8%9
+    set LOG_TIME=%TIME%
+    if "%LOG_TIME:~0,1%" == " " (
+        :: ensure hour format "NN:" not " N:"
+        set LOG_TIME=0%LOG_TIME:~1%
+    )
+    echo %DATE:~4% %LOG_TIME%: msg=%1%2%3%4%5%6%7%8%9
 endlocal
 exit /b
