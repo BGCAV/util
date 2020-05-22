@@ -8,8 +8,7 @@
 ::--    https://stackoverflow.com/questions/187587/a-windows-equivalent-of-the-unix-tail-command
 ::--
 ::--  In
-::--    %1 - (required) FilePathName to text file.  File names containing more
-::--         than one nonconsecutive ":" can't use this function.
+::--    %1 - (required) FilePathName to text file.
 ::--    %2 - (optional) Number of lines to print that are above the
 ::--         text file's end.  Defaults to 10.  Note, if the file is smaller
 ::--         than requested line, the entire file is displayed.
@@ -55,7 +54,7 @@ setlocal
     set TEST_LINE_CNT_RTN=%~2
 
     set TEST_LINE_CNT=0
-    for /f "tokens=2-3 delims=:" %%t in ('find /c /v "" "%TEXT_FILEPATH%" ^| findstr "\-\-\-\-.*:*.*:"') do call :textFileLenghtExtract TEST_LINE_CNT  %%t
+    for /f "delims=" %%t in ('find /c /v "" "%TEXT_FILEPATH%" ^|  findstr /e /r /c:":  *[0-9][0-9]*$"') do call :textFileLenghtExtract TEST_LINE_CNT %%t
     if not %errorlevel% == 0 (
         endlocal
         exit /b 1
@@ -66,13 +65,24 @@ set %TEST_LINE_CNT_RTN%=%TEST_LINE_CNT%
 )
 exit /b 0
 
+
 :textFileLenghtExtract:
+setlocal
+    set TEXT_LINE_CNT_RTN=%~1
+    :: extracting can't be reliably performed in for loop due to parens in file/directory names.
+    :textFileLenghtExtractShift:
+    if "%2" == "" (
+        goto :textFileLenghtExtractShiftDone
+    )
+    set "TEXT_LINE_CNT=%~2"
+    shift
+    goto :textFileLenghtExtractShift
+
+   :textFileLenghtExtractShiftDone:
+    echo %TEXT_LINE_CNT%| findstr /r /c:"^[0-9][0-9]*$">nul
     if not %errorlevel% == 0 (
         exit /b 1
     )
-setlocal
-    set TEXT_LINE_CNT_RTN=%~1
-    set TEXT_LINE_CNT=%~2
 (
 endlocal
 set %TEXT_LINE_CNT_RTN%=%TEXT_LINE_CNT%
