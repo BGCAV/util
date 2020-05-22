@@ -6,8 +6,12 @@
 ::--    the process is running normally or could benefit from restarting.
 ::--
 ::--  In
-::--    %1 - (required) Log Pathfile name written to by the Portal process.
-::--    %2 - (required) Relavent Interval expressed in seconds.  The maximum
+::--    %1 - (required) Framework provides process id of running instance.
+::--         However, this valuen isn't important to identifying the correct
+::--         log for SportsManSQL.  Note argument value can be "test".  When
+::--         so run tests on private functions.
+::--    %2 - (required) Log Pathfile name written to by the Portal process.
+::--    %3 - (required) Relavent Interval expressed in seconds.  The maximum
 ::--         elapsed interval between the generation of a log file entry and
 ::--         and the current time.  Log entries within this interval are
 ::--         considered when determining the recommended action.
@@ -35,12 +39,17 @@ setlocal
         call :testRun
         exit /b
     )
-    set LOG_PATHFILE_NAME=%~1
+    set LOG_PATHFILE_NAME=%~2
     if "%LOG_PATHFILE_NAME%" == "" (
         :: use set "varname=varvalue" when good chance varvalue will have ()s or other special batch characters 
         set "LOG_PATHFILE_NAME=%ProgramFiles(x86)%\Peak Software Systems\SportSQL\Portal.ERR"
     )
-    set INTERVAL_RELEVANT_SEC=%~2
+    if not exist "%LOG_PATHFILE_NAME%" (
+        call :log "Error: Log file='%LOG_PATHFILE_NAME%' missing or inaccessible due to permissions."
+        endlocal
+        exit /b 1
+    )
+    set INTERVAL_RELEVANT_SEC=%~3
     if "%INTERVAL_RELEVANT_SEC%" == "" (
         set INTERVAL_RELEVANT_SEC=10
     )
@@ -54,7 +63,12 @@ setlocal
         endlocal
         exit /b -2
     )
-    call :logEntryRelevant "%INTERVAL_RELEVANT_SEC%" "%DATE%" "%TIME:~0,8%" "%LOG_DATE%" "%LOG_TIME%"
+    set TIME_OF_REVIEW=%TIME:~0,8%
+    if "%TIME_OF_REVIEW:~0,1%" == " " (
+        :: ensure hour format "NN:" not " N:"
+        set TIME_OF_REVIEW=0%TIME_OF_REVIEW:~1%
+    )
+    call :logEntryRelevant "%INTERVAL_RELEVANT_SEC%" "%DATE%" "%TIME_OF_REVIEW%" "%LOG_DATE%" "%LOG_TIME%"
     if not %errorlevel% == 0 (
         :: no relevant log entries - assume running fine
         endlocal
@@ -123,7 +137,7 @@ setlocal
         endlocal
         exit /b 1
     )
-    echo %LOG_ENTRY% | findstr "^Portal.*Started">nul
+    echo %LOG_ENTRY% | findstr /r /c:"^Portal.*Started">nul
     if not %errorlevel% == 0 (
         endlocal
         exit /b 1
@@ -310,7 +324,7 @@ setlocal
     set LOG_TIME_RTN=%~2
 
     set TIME_EXTRACT=%LOG_ENTRY:~11,11%
-    echo %TIME_EXTRACT% | findstr "^%REGEX_HH_MM_SS_XM%">nul
+    echo %TIME_EXTRACT% | findstr /r /c:"^%REGEX_HH_MM_SS_XM%">nul
     if not %errorlevel% == 0 (
         endlocal
         exit /b 1
@@ -328,7 +342,7 @@ setlocal
     set LOG_DATE_RTN=%~2
 
     set LOG_DATE=%LOG_ENTRY:~0,10%
-    echo %LOG_DATE% | findstr "^%REGEX_MM_DD_YYYY%">nul
+    echo %LOG_DATE% | findstr /r /c:"^%REGEX_MM_DD_YYYY%">nul
 (
 endlocal
 set %LOG_DATE_RTN%=%LOG_DATE%
@@ -452,7 +466,7 @@ setlocal
     set TIME_HH_MM_SS=%~1
     set SS_RTN=%~2
 
-    echo %TIME_HH_MM_SS% | findstr "^%REGEX_HH_MM_SS%">nul
+    echo %TIME_HH_MM_SS% | findstr /r /c:"^%REGEX_HH_MM_SS%">nul
     if not %errorlevel% == 0 (
         endlocal
         exit /b 1
@@ -462,7 +476,8 @@ setlocal
         set MM=%%u
         set SS=%%v
     )
-    :: add 100 then sub 100 to eliminate leading zero 
+    :: add 100 then sub 100 to eliminate batch numberic
+    :: exception dur to leading zeroes
     set /A HH_SEC=(1%HH%-100)*60*60
     set /A MM_SEC=(1%MM%-100)*60
     set /A SS=1%SS%-100
@@ -479,7 +494,7 @@ setlocal
     set DATE_DAY_MM_DD_YYYY=%~1
     set DATE_MM_DD_YY_RTN=%~2
 
-    echo %DATE_DAY_MM_DD_YYYY% | findstr /I "^[a-z][a-z][a-z].%REGEX_MM_DD_YYYY%" >nul
+    echo %DATE_DAY_MM_DD_YYYY% | findstr /i /r /c:"^[a-z][a-z][a-z].%REGEX_MM_DD_YYYY%" >nul
     if not %errorlevel% == 0 (
         endlocal
         exit /b 1
@@ -526,7 +541,7 @@ setlocal
     set DATE_MM_DD_YYYY=%~1
     set DATE_MM_DD_YY_RTN=%~2
 
-    echo %DATE_MM_DD_YYYY% | findstr "^%REGEX_MM_DD_YYYY%">nul
+    echo %DATE_MM_DD_YYYY% | findstr /r /c:"^%REGEX_MM_DD_YYYY%">nul
     if not %errorlevel% == 0 (
         endlocal
         exit /b 1
@@ -590,12 +605,12 @@ exit /b 0
 setlocal
     set "LOG_ENTRY=%~1"
 
-    echo %LOG_ENTRY% | findstr /I "error.*1429.*the remote host address is invalid.*0.0.0.0">nul
+    echo %LOG_ENTRY% | findstr /i /r /c:"error.*1429.*the remote host address is invalid.*0.0.0.0">nul
     if %errorlevel% == 0 (
         endlocal
         exit /b 0
     )
-    echo %LOG_ENTRY% | findstr /I "valid name.*no data record.*check DNS setup">nul
+    echo %LOG_ENTRY% | findstr /i /r /c:"valid name.*no data record.*check DNS setup">nul
     if %errorlevel% == 0 (
         endlocal
         exit /b 0
@@ -624,6 +639,18 @@ setlocal
     )
 endlocal
 exit /b 0
+
+
+:log:
+setlocal
+    set LOG_TIME=%TIME%
+    if "%LOG_TIME:~0,1%" == " " (
+        :: ensure hour format "NN:" not " N:"
+        set LOG_TIME=0%LOG_TIME:~1%
+    )
+    echo %DATE:~4% %LOG_TIME%: msg=%1%2%3%4%5%6%7%8%9
+endlocal
+exit /b
 
 
 :testExpect0Capture:

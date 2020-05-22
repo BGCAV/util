@@ -2,30 +2,63 @@
 ::-----------------------------------------------------------------------------
 ::--
 ::--  Purpose
-::--    Reviews recent SportsManSQL's Portal log entries to determine if 
-::--    the process is running normally or could benefit from restarting.
-::--
-::--  In
-::--    %1 - (required) Log Pathfile name written to by the Portal process.
-::--    %2 - (required) Relavent Interval expressed in seconds.  The maximum
-::--         elapsed interval between the generation of a log file entry and
-::--         and the current time.  Log entries within this interval are
-::--         considered when determining the recommended action.
-::--    Running without specifying any arguments runs unit tests.
-::--
-::--  Out
-::--    %errorlevel% - Recommended actions are defined and performed by
-::--       "processMonitorRunning.cmd". At the time of this module's last commit
-::--       the errorlevel returned by this component had to return the following:
-::--          1 - analyzer failed - do nothing
-::--          0 - program execution normal - do nothing.
-::--         -1 - program impared, try restarting.
-::--         -2 - unable to determine next course of action - do nothing.
-::--    SYSOUT - log messages.  Perhaps they should also be
-::--       consumed as feedback.
+::--    Test logAnalyzerSportsManSQL.cmd through its public interface.
 ::--
 ::-----------------------------------------------------------------------------
 setlocal
+    set RANDOM_LOG_ENTRY_GEN="%~1"
+
+    if /i "%~1" == "RANDOM_ENTRY" (
+        call :testRandom "%~2"
+        exit /b
+    )
+call :testDeterministic
+exit /b 1
+
+
+:testRandom:
+setlocal
+    set LOG_FILEPATH=%~1
+    
+    set /A SITUATION_CHOICE=%RANDOM% %%3
+    goto :logEntryGen%SITUATION_CHOICE%
+    :logEntryGen0:
+        :: Normal execution - no log message generated
+        endlocal
+        exit /b 0
+    :logEntryGen1:
+        call :logTimeSimulateNow LOG_TIME
+        call :logDateSimulateNow LOG_DATE
+        set "LOG_ENTRY=%LOG_DATE% %LOG_TIME% Error 1429 The remote Host address is invalid (0.0.0.0) module init line #285"
+    goto :logEntryWrite
+    :logEntryGen2:
+        call :logTimeSimulateNow LOG_TIME
+        call :logDateSimulateNow LOG_DATE
+        set "LOG_ENTRY=%LOG_DATE% %LOG_TIME% New log entry - unknown action"
+    goto :logEntryWrite
+
+    :logEntryWrite:
+    echo %LOG_ENTRY%>>"%LOG_FILEPATH%"
+endlocal
+exit /b 0
+
+
+:testDeterministic:
+setlocal
+
+    set "RELEVANT_INCONCLUSIVE=sportsManSQLAnalyzer.cmd.Test.Files\__tempRelevant_Inconclusive"
+    call :logTimeSimulateNow LOG_TIME
+    call :logDateSimulateNow LOG_DATE
+    echo %LOG_DATE% %LOG_TIME% Relevant log ok>"%RELEVANT_INCONCLUSIVE%"
+    call :testExpect-2Capture logAnalyzerSportsManSQL.cmd 1234 "%RELEVANT_INCONCLUSIVE%"
+    if not %errorlevel% == 0 (
+        endlocal
+        exit /b 1
+    )
+    del "%RELEVANT_INCONCLUSIVE%">nul
+    set RELEVANT_INCONCLUSIVE=
+exit /b
+
     call :testExpect0Capture logAnalyzerSportsManSQL.cmd "sportsManSQLAnalyzer.cmd.Test.Files\LogNewIndicatesOK"
     if not %errorlevel% == 0 (
         endlocal
@@ -36,29 +69,29 @@ setlocal
         endlocal
         exit /b 1
     )
-    set "RELAVENT_OK=sportsManSQLAnalyzer.cmd.Test.Files\__tempRelavent_OK"
+    set "RELEVANT_INCONCLUSIVE=sportsManSQLAnalyzer.cmd.Test.Files\__tempRelevant_Inconclusive"
     call :logTimeSimulateNow LOG_TIME
     call :logDateSimulateNow LOG_DATE
-    echo %LOG_DATE% %LOG_TIME% Relavent log ok>"%RELAVENT_OK%"
-    call :testExpect-2Capture logAnalyzerSportsManSQL.cmd "%RELAVENT_OK%"
+    echo %LOG_DATE% %LOG_TIME% Relevant log ok>"%RELEVANT_INCONCLUSIVE%"
+    call :testExpect-2Capture logAnalyzerSportsManSQL.cmd "%RELEVANT_INCONCLUSIVE%"
     if not %errorlevel% == 0 (
         endlocal
         exit /b 1
     )
-    del "%RELAVENT_OK%">nul
-    set RELAVENT_OK=
+    del "%RELEVANT_INCONCLUSIVE%">nul
+    set RELEVANT_INCONCLUSIVE=
 
-    set "RELAVENT_RESTART=sportsManSQLAnalyzer.cmd.Test.Files\__tempRelavent_RESTART"
+    set "RELEVANT_RESTART=sportsManSQLAnalyzer.cmd.Test.Files\__tempRelevant_RESTART"
     call :logTimeSimulateNow LOG_TIME
     call :logDateSimulateNow LOG_DATE
-    echo %LOG_DATE% %LOG_TIME% Error 1429 The remote Host address is invalid (0.0.0.0) module init line #285>"%RELAVENT_RESTART%"
-    call :testExpect-1Capture  logAnalyzerSportsManSQL.cmd "%RELAVENT_RESTART%"
+    echo %LOG_DATE% %LOG_TIME% Error 1429 The remote Host address is invalid (0.0.0.0) module init line #285>"%RELEVANT_RESTART%"
+    call :testExpect-1Capture  logAnalyzerSportsManSQL.cmd "%RELEVANT_RESTART%"
     if not %errorlevel% == 0 (
         endlocal
         exit /b 1
     )
-    del "%RELAVENT_RESTART%">nul
-    set RELAVENT_RESTART=
+    del "%RELEVANT_RESTART%">nul
+    set RELEVANT_RESTART=
 endlocal
 exit /b 0
 
@@ -71,7 +104,6 @@ endlocal
 set %LOG_DATE_RTN%=%DATE:~4%
 )
 exit /b 0
-
 
 :logTimeSimulateNow:
 setlocal
@@ -104,6 +136,7 @@ exit /b 0
         exit /b 1
     )
 exit /b 0
+
 
 :testExpect-1Capture:
    :: no setlocal - need side effects to return appropriate values
