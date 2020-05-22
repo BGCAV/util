@@ -1,12 +1,12 @@
 @echo off
 setlocal
     ::-- warm the local DNS cache before involving the Portal process
-    dnsResolutionCheckPeakSoftware.cmd
+    call dnsResolutionCheckPeakSoftware.cmd
     if not %errorlevel% == 0 (
         endlocal
         exit /b 1
     )
-    start "portal.exe" /B "%ProgramFiles(x86)%\Peak Software Systems'SportSQL\portal.exe"
+    start "notpade.exe" /B "%ProgramFiles(x86)%\Peak Software Systems\SportSQL\portal.exe.lnk"
     if not %errorlevel% == 0 (
         endlocal
         exit /b 1
