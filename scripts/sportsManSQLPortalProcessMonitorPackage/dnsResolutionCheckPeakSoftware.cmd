@@ -19,6 +19,10 @@
 ::--
 ::-----------------------------------------------------------------------------
 setlocal
-    retryCommandExponentialBackoff.cmd dnsResolutionCheck.cmd gateway.activityreg.com
+    call retryCommandExponentialBackoff.cmd dnsResolutionCheck.cmd gateway.activityreg.com
+    if not %errorlevel% == 0 (
+        endlocal
+        exit /b 1
+    )
 endlocal
-exit /b
+exit /b 0
