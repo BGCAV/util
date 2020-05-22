@@ -45,19 +45,7 @@ setlocal EnableDelayedExpansion
         endlocal
         exit /b 1
     )
-    call :programToProcessID "%PROGRAM_NAME%" PROCESS_ID
-    if not %errorlevel% == 0 (
-        call :log "Info: program='%PROGRAM_START_FILEPATH%' not running.  Attempting to start"
-        call :processStart "%PROGRAM_START_FILEPATH%"
-        if !errorlevel! == 0 (
-            call :log "Info: program='%PROGRAM_START_FILEPATH%' successful start."
-            call :programToProcessID "%PROGRAM_NAME%" PROCESS_ID
-        ) else (
-            call :log "Error: program='%PROGRAM_START_FILEPATH%' could not start."
-            endlocal
-            exit /b 1
-        )
-    )
+    call :programMonitor "%PROGRAM_NAME%" "%PROGRAM_START_FILEPATH%" PROCESS_ID
     if "%LOG_ANALYZER%" == "" (
         call :log "Info: program="%PROGRAM_NAME%" log analyzer not specified, therefore, cannot determine action to execute."
         endlocal
@@ -96,6 +84,37 @@ setlocal EnableDelayedExpansion
 endlocal
 exit /b 1
 
+
+:programMonitor:
+setlocal
+    set PROGRAM_NAME=%~1
+    set PROGRAM_START_FILEPATH=%~2
+    set PROCESS_ID_RTN=%~3
+
+    call :programToProcessID "%PROGRAM_NAME%" PROCESS_ID
+    if %errorlevel% == 0 (
+        goto programMonitorRunning
+    )
+    call :log "Info: program='%PROGRAM_NAME%' started by='%PROGRAM_START_FILEPATH%' not running.  Attempting to start"
+    call :processStart "%PROGRAM_START_FILEPATH%"
+    if not %errorlevel% == 0 (
+        call :log "Error: Unable to start program='%PROGRAM_NAME%'."
+        endlocal
+        exit /b 1
+    )
+    call :programToProcessID "%PROGRAM_NAME%" PROCESS_ID
+    if not !errorlevel! == 0 (
+        call :log "Error: program='%PROGRAM_NAME%' seemed to start but unable to determine PROCESS_ID."
+        endlocal
+        exit /b 1
+    )
+    call :log "Info: program='%PROGRAM_START_FILEPATH%' successfully started."
+    :programMonitorRunning:
+(
+endlocal
+set %PROCESS_ID_RTN%=%PROCESS_ID%
+)
+exit /b 0
 
 :programToProcessID:
 setlocal
@@ -180,9 +199,12 @@ exit /b 0
 
 :log:
 setlocal
-    For /f "tokens=2-4 delims=/ " %%a in ('date /t') do (set LOG_DATE=%%c-%%a-%%b)
-    For /f "tokens=1-2 delims=/:" %%a in ('time /t') do (set LOG_TIME=%%a%%b)
-    echo %LOG_DATE%_%LOG_TIME%: msg=%1%2%3%4%5%6%7%8%9
+    set LOG_TIME=%TIME%
+    if "%LOG_TIME:~0,1%" == " " (
+        :: ensure hour format "NN:" not " N:"
+        set LOG_TIME=0%LOG_TIME:~1%
+    )
+    echo %DATE:~4% %LOG_TIME%: msg=%1%2%3%4%5%6%7%8%9
 endlocal
 exit /b
 
