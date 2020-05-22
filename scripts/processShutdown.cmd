@@ -71,7 +71,7 @@ setlocal
     set /A MONITOR_INTERVAL_TIMEOUT_SEC=%~3 - %MONITOR_INTERVAL_SEC%
     :retryMonitor
     timeout /NOBREAK /T %MONITOR_INTERVAL_SEC%
-    tasklist /FO LIST /FI "PID eq %PROCESS_ID%" | findstr /b "PID: *%PROCESS_ID%$" > nul
+    tasklist /FO LIST /FI "PID eq %PROCESS_ID%" | findstr /b /r /c:"PID: *%PROCESS_ID%$" > nul
     if not %errorlevel% == 0 (
         :: Process ID not found - assumed terminated.
         endlocal
@@ -100,9 +100,12 @@ exit /b
 
 :log:
 setlocal
-    For /f "tokens=2-4 delims=/ " %%a in ('date /t') do (set mydate=%%c-%%a-%%b)
-    For /f "tokens=1-2 delims=/:" %%a in ('time /t') do (set mytime=%%a%%b)
-    echo %mydate%_%mytime%: msg=%1%2%3%4%5%6%7%8%9
+    set LOG_TIME=%TIME%
+    if "%LOG_TIME:~0,1%" == " " (
+        :: ensure hour format "NN:" not " N:"
+        set LOG_TIME=0%LOG_TIME:~1%
+    )
+    echo %DATE:~4% %LOG_TIME%: msg=%1%2%3%4%5%6%7%8%9
 endlocal
 exit /b
 
